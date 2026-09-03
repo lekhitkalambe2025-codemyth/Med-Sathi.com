@@ -1,0 +1,17 @@
+{
+  "name": "smartmedchart",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "concurrently -k -n \"SERVER,CLIENT\" -c \"blue.bold,cyan.bold\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently -k -n \"SERVER,CLIENT\" -c \"blue.bold,cyan.bold\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run start --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "seed": "npm run seed --prefix server",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
