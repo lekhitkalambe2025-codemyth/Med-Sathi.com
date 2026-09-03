@@ -48,9 +48,19 @@ function initSchema(forceReset = false) {
       medicalHistory TEXT, -- JSON array
       vitals TEXT, -- JSON object { bp, hr, spo2, temp }
       admittedAt TEXT NOT NULL,
-      qrCode TEXT NOT NULL
+      qrCode TEXT NOT NULL,
+      arrivalPhase TEXT DEFAULT 'Phase 1'
     );
+  `);
 
+  // Non-destructive column addition if table already exists
+  try {
+    db.exec("ALTER TABLE patients ADD COLUMN arrivalPhase TEXT DEFAULT 'Phase 1';");
+  } catch (e) {
+    // Column already exists
+  }
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS prescriptions (
       id TEXT PRIMARY KEY,
       patientId TEXT NOT NULL,

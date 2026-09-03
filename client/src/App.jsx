@@ -114,9 +114,11 @@ export function App() {
               )}
 
               {/* Admin Views */}
-              {currentView === 'admin-overview' && (
+              {(currentView === 'admin-overview' || currentView === 'admin-patients') && (
                 <AdminDashboard
+                  initialTab={currentView === 'admin-patients' ? 'admissions' : 'overview'}
                   onNavigateToAudit={() => setCurrentView('audit-log')}
+                  onSelectPatient={handleSelectPatient}
                 />
               )}
 

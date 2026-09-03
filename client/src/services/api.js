@@ -41,6 +41,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(patientData),
     }),
+    updatePhase: (id, phase) => fetchJson(`/patients/${id}/phase`, {
+      method: 'PATCH',
+      body: JSON.stringify({ arrivalPhase: phase }),
+    }),
   },
 
   prescriptions: {

@@ -113,7 +113,7 @@ router.get('/:id', (req, res) => {
 // POST /api/patients - Admit / Add new inpatient to hospital
 router.post('/', (req, res) => {
   try {
-    const { name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory } = req.body;
+    const { name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory, arrivalPhase, admittedAt } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Patient name is required.' });
     }
@@ -121,13 +121,15 @@ router.post('/', (req, res) => {
     const nextNum = Math.floor(1000 + Math.random() * 9000);
     const id = `pat-${nextNum}`;
     const uhid = `P${nextNum}`;
-    const patientWard = ward || 'General Ward';
-    const patientBed = bed || `${patientWard.slice(0, 3).toUpperCase()}-${Math.floor(1 + Math.random() * 20)}`;
+    const patientWard = (ward && ward.trim()) ? ward.trim() : 'General Ward';
+    const patientBed = (bed && bed.trim()) ? bed.trim() : `${patientWard.slice(0, 3).toUpperCase()}-${Math.floor(1 + Math.random() * 20)}`;
+    const patientPhase = (arrivalPhase && arrivalPhase.trim()) ? arrivalPhase.trim() : 'Phase 1';
+    const arrivalTime = admittedAt || new Date().toISOString();
     const qrCode = `SMARTMED:PATIENT:${id}:${uhid}:${name.trim()}:${patientBed}`;
 
     db.prepare(`
-      INSERT INTO patients (id, uhid, name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory, vitals, admittedAt, qrCode)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO patients (id, uhid, name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory, vitals, admittedAt, qrCode, arrivalPhase)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       uhid,
@@ -137,26 +139,53 @@ router.post('/', (req, res) => {
       parseFloat(weight) || 65.0,
       patientWard,
       patientBed,
-      diagnosis || 'Observation & Inpatient Workup',
+      diagnosis || 'Inpatient Admission & Clinical Evaluation',
       JSON.stringify(allergies || []),
       JSON.stringify(medicalHistory || []),
       JSON.stringify({ hr: 78, bp: '120/80', temp: '98.6 F', spo2: '98%' }),
-      new Date().toISOString(),
-      qrCode
+      arrivalTime,
+      qrCode,
+      patientPhase
     );
 
     const newPatient = db.prepare('SELECT * FROM patients WHERE id = ?').get(id);
     res.json({
       success: true,
-      message: `Patient ${name} successfully admitted to ${patientWard} Bed ${patientBed}`,
+      message: `Patient ${name} successfully admitted to ${patientWard} Bed ${patientBed} (${patientPhase})`,
       data: {
         ...newPatient,
         allergies: safeJsonParse(newPatient.allergies, []),
         medicalHistory: safeJsonParse(newPatient.medicalHistory, []),
         vitals: safeJsonParse(newPatient.vitals, {}),
+        arrivalPhase: newPatient.arrivalPhase || patientPhase,
         activePrescriptionsCount: 0,
         hasPendingStat: false,
         dueCount: 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PATCH /api/patients/:id/phase - Update patient arrival / care phase
+router.patch('/:id/phase', (req, res) => {
+  try {
+    const { arrivalPhase } = req.body;
+    if (!arrivalPhase) {
+      return res.status(400).json({ success: false, error: 'arrivalPhase is required' });
+    }
+
+    db.prepare('UPDATE patients SET arrivalPhase = ? WHERE id = ? OR uhid = ?').run(arrivalPhase, req.params.id, req.params.id);
+    const updated = db.prepare('SELECT * FROM patients WHERE id = ? OR uhid = ?').get(req.params.id, req.params.id);
+
+    res.json({
+      success: true,
+      data: {
+        ...updated,
+        allergies: safeJsonParse(updated.allergies, []),
+        medicalHistory: safeJsonParse(updated.medicalHistory, []),
+        vitals: safeJsonParse(updated.vitals, {})
       }
     });
   } catch (err) {

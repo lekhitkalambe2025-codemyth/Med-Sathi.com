@@ -23,6 +23,7 @@ export function Sidebar({ currentView, onViewChange }) {
 
   const adminNav = [
     { id: 'admin-overview', label: 'Hospital Overview', icon: BarChart3, desc: 'Real-time KPIs & charts' },
+    { id: 'admin-patients', label: 'Inpatient Admissions', icon: Users, desc: 'Admit, track arrival & phases' },
     { id: 'audit-log', label: 'Traceable Audit Log', icon: Shield, desc: 'Full actor accountability' },
     { id: 'pharmacy-stock', label: 'Pharmacy Inventory', icon: Package, desc: 'Stock levels & orders' },
   ];
