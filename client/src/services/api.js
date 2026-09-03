@@ -37,6 +37,10 @@ export const api = {
       return fetchJson(`/patients${query ? `?${query}` : ''}`);
     },
     getById: (id) => fetchJson(`/patients/${id}`),
+    create: (patientData) => fetchJson('/patients', {
+      method: 'POST',
+      body: JSON.stringify(patientData),
+    }),
   },
 
   prescriptions: {

@@ -110,4 +110,58 @@ router.get('/:id', (req, res) => {
   }
 });
 
+// POST /api/patients - Admit / Add new inpatient to hospital
+router.post('/', (req, res) => {
+  try {
+    const { name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Patient name is required.' });
+    }
+
+    const nextNum = Math.floor(1000 + Math.random() * 9000);
+    const id = `pat-${nextNum}`;
+    const uhid = `P${nextNum}`;
+    const patientWard = ward || 'General Ward';
+    const patientBed = bed || `${patientWard.slice(0, 3).toUpperCase()}-${Math.floor(1 + Math.random() * 20)}`;
+    const qrCode = `SMARTMED:PATIENT:${id}:${uhid}:${name.trim()}:${patientBed}`;
+
+    db.prepare(`
+      INSERT INTO patients (id, uhid, name, age, gender, weight, ward, bed, diagnosis, allergies, medicalHistory, vitals, admittedAt, qrCode)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      uhid,
+      name.trim(),
+      parseInt(age, 10) || 45,
+      gender || 'Male',
+      parseFloat(weight) || 65.0,
+      patientWard,
+      patientBed,
+      diagnosis || 'Observation & Inpatient Workup',
+      JSON.stringify(allergies || []),
+      JSON.stringify(medicalHistory || []),
+      JSON.stringify({ hr: 78, bp: '120/80', temp: '98.6 F', spo2: '98%' }),
+      new Date().toISOString(),
+      qrCode
+    );
+
+    const newPatient = db.prepare('SELECT * FROM patients WHERE id = ?').get(id);
+    res.json({
+      success: true,
+      message: `Patient ${name} successfully admitted to ${patientWard} Bed ${patientBed}`,
+      data: {
+        ...newPatient,
+        allergies: safeJsonParse(newPatient.allergies, []),
+        medicalHistory: safeJsonParse(newPatient.medicalHistory, []),
+        vitals: safeJsonParse(newPatient.vitals, {}),
+        activePrescriptionsCount: 0,
+        hasPendingStat: false,
+        dueCount: 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

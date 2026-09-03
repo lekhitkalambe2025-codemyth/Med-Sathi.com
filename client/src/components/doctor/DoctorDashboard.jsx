@@ -6,7 +6,7 @@ import { CreatePrescriptionModal } from './CreatePrescriptionModal';
 import { QrCodeModal } from '../common/QrCodeModal';
 import { 
   Users, Stethoscope, Clock, Zap, Search, Filter, 
-  Plus, ArrowRight, Eye, AlertTriangle, ShieldCheck, QrCode 
+  Plus, ArrowRight, Eye, AlertTriangle, ShieldCheck, QrCode, UserPlus, X 
 } from 'lucide-react';
 
 export function DoctorDashboard({ onSelectPatient }) {
@@ -20,6 +20,20 @@ export function DoctorDashboard({ onSelectPatient }) {
   const [patientForPrescription, setPatientForPrescription] = useState(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [patientForQr, setPatientForQr] = useState(null);
+
+  // Admit Inpatient Modal State
+  const [admitModalOpen, setAdmitModalOpen] = useState(false);
+  const [admitForm, setAdmitForm] = useState({
+    name: '',
+    age: '50',
+    gender: 'Male',
+    weight: '70',
+    ward: 'General Ward',
+    bed: 'GW-05',
+    allergies: '',
+    diagnosis: 'Acute Inpatient Evaluation'
+  });
+  const [admitLoading, setAdmitLoading] = useState(false);
 
   const fetchPatients = () => {
     setLoading(true);
@@ -58,18 +72,26 @@ export function DoctorDashboard({ onSelectPatient }) {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (patients.length > 0) {
-              setPatientForPrescription(patients[0]);
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAdmitModalOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-subtle transition-all hover-lift"
+          >
+            <UserPlus className="w-4 h-4 text-brand-600" />
+            <span>+ Admit Patient</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setPatientForPrescription(null);
               setCreateModalOpen(true);
-            }
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-md shadow-brand-600/25 transition-all hover-lift"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Prescription</span>
-        </button>
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-md shadow-brand-600/25 transition-all hover-lift"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Prescription</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards Strip */}
@@ -270,11 +292,12 @@ export function DoctorDashboard({ onSelectPatient }) {
 
       </div>
 
-      {/* Prescription Creator Modal */}
+      {/* Prescription Creator Modal with full patient list & on-the-fly admission */}
       <CreatePrescriptionModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         patient={patientForPrescription}
+        patients={patients}
         onSuccess={() => fetchPatients()}
       />
 
@@ -284,6 +307,233 @@ export function DoctorDashboard({ onSelectPatient }) {
         onClose={() => setQrModalOpen(false)}
         patient={patientForQr}
       />
+
+      {/* Admit New Inpatient Modal */}
+      {admitModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-300 flex items-center justify-center border border-brand-400/30">
+                  <UserPlus className="w-5 h-5 text-teal-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Admit Inpatient to Ward</h3>
+                  <p className="text-xs text-slate-400">Generate Digital Bedside Chart & QR Identifier</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdmitModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 1-Click Quick Presets */}
+            <div className="p-3 bg-slate-50 border-b border-slate-200">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                1-Click Presets:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setAdmitForm({
+                    name: 'Rohan Sharma',
+                    age: '42',
+                    gender: 'Male',
+                    weight: '74',
+                    ward: 'General Ward',
+                    bed: 'GW-11',
+                    allergies: 'Penicillin',
+                    diagnosis: 'Bacterial Pneumonia'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-brand-400 font-semibold text-slate-700 shadow-2xs"
+                >
+                  + Rohan Sharma (GW-11)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdmitForm({
+                    name: 'Sunita Devi',
+                    age: '58',
+                    gender: 'Female',
+                    weight: '62',
+                    ward: 'Cardiology',
+                    bed: 'CARD-04',
+                    allergies: 'Aspirin',
+                    diagnosis: 'Congestive Heart Failure'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-brand-400 font-semibold text-slate-700 shadow-2xs"
+                >
+                  + Sunita Devi (CARD-04)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdmitForm({
+                    name: 'Amitabh Sen',
+                    age: '67',
+                    gender: 'Male',
+                    weight: '80',
+                    ward: 'ICU',
+                    bed: 'ICU-03',
+                    allergies: 'None',
+                    diagnosis: 'Post-Op Monitoring'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-brand-400 font-semibold text-slate-700 shadow-2xs"
+                >
+                  + Amitabh Sen (ICU-03)
+                </button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!admitForm.name.trim()) return;
+                setAdmitLoading(true);
+                try {
+                  const payload = {
+                    ...admitForm,
+                    age: parseInt(admitForm.age, 10) || 45,
+                    weight: parseFloat(admitForm.weight) || 70,
+                    allergies: admitForm.allergies ? admitForm.allergies.split(',').map(a => a.trim()).filter(Boolean) : []
+                  };
+                  await api.patients.create(payload);
+                  setAdmitModalOpen(false);
+                  fetchPatients();
+                  setAdmitForm({
+                    name: '',
+                    age: '50',
+                    gender: 'Male',
+                    weight: '70',
+                    ward: 'General Ward',
+                    bed: 'GW-05',
+                    allergies: '',
+                    diagnosis: 'Acute Inpatient Evaluation'
+                  });
+                } catch (err) {
+                  console.error('Failed to admit patient:', err);
+                } finally {
+                  setAdmitLoading(false);
+                }
+              }}
+              className="p-5 space-y-3.5 text-xs"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={admitForm.name}
+                    onChange={(e) => setAdmitForm({ ...admitForm, name: e.target.value })}
+                    required
+                    placeholder="e.g. Ramesh Kumar"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Age & Gender</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      value={admitForm.age}
+                      onChange={(e) => setAdmitForm({ ...admitForm, age: e.target.value })}
+                      className="w-14 px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                    />
+                    <select
+                      value={admitForm.gender}
+                      onChange={(e) => setAdmitForm({ ...admitForm, gender: e.target.value })}
+                      className="flex-1 px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Ward *</label>
+                  <select
+                    value={admitForm.ward}
+                    onChange={(e) => setAdmitForm({ ...admitForm, ward: e.target.value })}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                  >
+                    <option value="General Ward">General Ward</option>
+                    <option value="ICU">ICU</option>
+                    <option value="Cardiology">Cardiology</option>
+                    <option value="Pediatrics">Pediatrics</option>
+                    <option value="Surgical">Surgical Ward</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Bed Number *</label>
+                  <input
+                    type="text"
+                    value={admitForm.bed}
+                    onChange={(e) => setAdmitForm({ ...admitForm, bed: e.target.value })}
+                    required
+                    placeholder="e.g. GW-08"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Weight (kg)</label>
+                  <input
+                    type="number"
+                    value={admitForm.weight}
+                    onChange={(e) => setAdmitForm({ ...admitForm, weight: e.target.value })}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Clinical Diagnosis</label>
+                <input
+                  type="text"
+                  value={admitForm.diagnosis}
+                  onChange={(e) => setAdmitForm({ ...admitForm, diagnosis: e.target.value })}
+                  placeholder="e.g. Type 2 Diabetes, Hypertension"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Documented Allergies</label>
+                <input
+                  type="text"
+                  value={admitForm.allergies}
+                  onChange={(e) => setAdmitForm({ ...admitForm, allergies: e.target.value })}
+                  placeholder="e.g. Penicillin, Sulfa drugs (or None)"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setAdmitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={admitLoading}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-brand-600 via-sky-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-md shadow-brand-600/25 transition-all hover-lift flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{admitLoading ? 'Admitting...' : 'Admit Patient & Generate QR'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

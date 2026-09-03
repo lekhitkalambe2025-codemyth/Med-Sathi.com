@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { 
   Pill, AlertTriangle, Clock, Calendar, Check, Stethoscope, 
-  Sparkles, Info, ShieldAlert, Mic, MicOff, Volume2 
+  Sparkles, Info, ShieldAlert, Mic, MicOff, Volume2, UserPlus, User, Plus, X, ChevronDown 
 } from 'lucide-react';
 
 const COMMON_MEDICINES = [
@@ -21,9 +21,81 @@ const COMMON_MEDICINES = [
   { name: 'Ibuprofen', defaultDose: '400 mg', defaultRoute: 'Oral', defaultFreq: 'BD' },
 ];
 
-export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess }) {
+export function CreatePrescriptionModal({ isOpen, onClose, patient: propPatient, patients: propPatients = [], onSuccess }) {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
+
+  // Patient Selection & Creation States
+  const [patientList, setPatientList] = useState(propPatients);
+  const [selectedPatientId, setSelectedPatientId] = useState(propPatient?.id || propPatients[0]?.id || '');
+  const [isAddingPatient, setIsAddingPatient] = useState(false);
+  const [addingPatientLoading, setAddingPatientLoading] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({
+    name: '',
+    age: '45',
+    gender: 'Male',
+    weight: '68',
+    ward: 'General Ward',
+    bed: 'GW-09',
+    allergies: '',
+    diagnosis: 'Inpatient Evaluation'
+  });
+
+  // Fetch full hospital patients on open or sync with props
+  useEffect(() => {
+    if (isOpen) {
+      api.patients.getAll()
+        .then(res => {
+          const fetched = res.data || [];
+          setPatientList(fetched);
+          if (propPatient) {
+            setSelectedPatientId(propPatient.id);
+          } else if (!selectedPatientId && fetched.length > 0) {
+            setSelectedPatientId(fetched[0].id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, propPatient]);
+
+  const activePatient = patientList.find(p => p.id === selectedPatientId) || propPatient || patientList[0];
+
+  const handleAddNewPatient = async (e) => {
+    e.preventDefault();
+    if (!newPatientForm.name.trim()) {
+      showToast('Please enter a patient name', 'error');
+      return;
+    }
+
+    setAddingPatientLoading(true);
+    try {
+      const payload = {
+        ...newPatientForm,
+        age: parseInt(newPatientForm.age, 10) || 45,
+        allergies: newPatientForm.allergies ? newPatientForm.allergies.split(',').map(a => a.trim()).filter(Boolean) : []
+      };
+      const res = await api.patients.create(payload);
+      const created = res.data;
+      setPatientList(prev => [created, ...prev]);
+      setSelectedPatientId(created.id);
+      setIsAddingPatient(false);
+      showToast(`Admitted ${created.name} (${created.id}) to ${created.ward} Bed ${created.bed}!`, 'success');
+      setNewPatientForm({
+        name: '',
+        age: '45',
+        gender: 'Male',
+        weight: '68',
+        ward: 'General Ward',
+        bed: 'GW-09',
+        allergies: '',
+        diagnosis: 'Inpatient Evaluation'
+      });
+    } catch (err) {
+      showToast(err.message || 'Failed to admit patient', 'error');
+    } finally {
+      setAddingPatientLoading(false);
+    }
+  };
 
   const [medicine, setMedicine] = useState('Paracetamol');
   const [dose, setDose] = useState('500 mg');
@@ -183,11 +255,11 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
 
   // Live Safety Check & Schedule Preview calculation
   useEffect(() => {
-    if (!isOpen || !patient) return;
+    if (!isOpen || !activePatient) return;
 
     // 1. Safety Check
     api.prescriptions.safetyCheck({
-      patientId: patient.id,
+      patientId: activePatient.id,
       medicine,
       dose
     })
@@ -208,10 +280,15 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
       .then(res => setPreviewSchedule(res))
       .catch(() => setPreviewSchedule({ totalEvents: 0, events: [] }));
 
-  }, [isOpen, patient, medicine, dose, route, frequency, durationDays, startDate, startTime, isStat]);
+  }, [isOpen, activePatient?.id, medicine, dose, route, frequency, durationDays, startDate, startTime, isStat]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!activePatient) {
+      showToast('Please select or admit a patient first', 'error');
+      return;
+    }
+
     if (!medicine || !dose) {
       showToast('Please enter both medicine and dose', 'error');
       return;
@@ -220,7 +297,7 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
     setSubmitting(true);
     try {
       const payload = {
-        patientId: patient.id,
+        patientId: activePatient.id,
         doctorId: currentUser?.id || 'USR-DOC-01',
         doctorName: currentUser?.name || 'Dr. Rajesh Sharma',
         medicine,
@@ -245,32 +322,179 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
     }
   };
 
-  if (!patient) return null;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Prescription & Auto-Generate Drug Chart" maxWidth="max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-5">
         
-        {/* Patient Reference Header */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase text-slate-400">Target Patient</span>
-            <h4 className="text-sm font-bold text-slate-800">{patient.name} ({patient.id})</h4>
-            <p className="text-xs text-slate-500">Ward: {patient.ward} • Bed: {patient.bed} • Age: {patient.age}y</p>
-          </div>
-          {patient.allergies && patient.allergies.length > 0 && (
-            <div className="text-right">
-              <span className="text-[10px] font-bold uppercase text-rose-500 block">Documented Allergies</span>
-              <div className="flex gap-1 justify-end mt-0.5">
-                {patient.allergies.map((a, i) => (
-                  <span key={i} className="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200">
-                    ⚠ {a}
-                  </span>
-                ))}
+        {/* Dynamic Target Patient Selection or Inline Inpatient Admission */}
+        {isAddingPatient ? (
+          <div className="bg-brand-50/70 border border-brand-200 rounded-2xl p-4 shadow-subtle space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-brand-700" />
+                <span className="text-xs font-black text-brand-900">Admit New Inpatient to Hospital</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingPatient(false)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800"
+              >
+                Cancel & Select Existing
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Patient Full Name *</label>
+                <input
+                  type="text"
+                  value={newPatientForm.name}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, name: e.target.value })}
+                  placeholder="e.g. Amit Verma"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Age & Gender</label>
+                <div className="flex gap-1.5">
+                  <input
+                    type="number"
+                    value={newPatientForm.age}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, age: e.target.value })}
+                    placeholder="Age"
+                    className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500"
+                  />
+                  <select
+                    value={newPatientForm.gender}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, gender: e.target.value })}
+                    className="flex-1 px-2 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Ward *</label>
+                <select
+                  value={newPatientForm.ward}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, ward: e.target.value })}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900"
+                >
+                  <option value="General Ward">General Ward</option>
+                  <option value="ICU">Intensive Care Unit (ICU)</option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Surgical">Surgical Ward</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Bed Number *</label>
+                <input
+                  type="text"
+                  value={newPatientForm.bed}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, bed: e.target.value })}
+                  placeholder="e.g. GW-09"
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Known Allergies</label>
+                <input
+                  type="text"
+                  value={newPatientForm.allergies}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, allergies: e.target.value })}
+                  placeholder="e.g. Penicillin, Sulfa"
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleAddNewPatient}
+                disabled={addingPatientLoading}
+                className="px-4 py-1.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-sm transition-all hover-lift flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{addingPatientLoading ? 'Admitting Patient...' : 'Admit & Select for Prescription'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-50/90 border border-slate-200/90 rounded-2xl p-3.5 shadow-subtle">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-brand-600" />
+                <span className="text-xs font-black text-slate-800">Target Inpatient</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingPatient(true)}
+                className="text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1 rounded-xl border border-brand-200 transition-colors flex items-center gap-1 shadow-subtle hover-lift"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>+ Add / Admit New Patient</span>
+              </button>
+            </div>
+
+            {/* Inpatient Dropdown & Info Strip */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="w-full sm:w-1/2">
+                <select
+                  value={activePatient?.id || ''}
+                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-2xs"
+                >
+                  {patientList.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.ward} • Bed {p.bed} • {p.age}y)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {activePatient && (
+                <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium">
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 font-mono text-[11px] text-slate-700">
+                    UHID: <strong>{activePatient.uhid || activePatient.id}</strong>
+                  </span>
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">
+                    {activePatient.gender} • {activePatient.age}y
+                  </span>
+                  <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">
+                    Ward: <strong className="text-brand-700">{activePatient.ward}</strong> (Bed {activePatient.bed})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Documented Allergies Warning */}
+            {activePatient?.allergies && activePatient.allergies.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-slate-200/80 flex items-center justify-between flex-wrap gap-2 text-xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Documented Allergies:</span>
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {activePatient.allergies.map((a, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-bold border border-rose-200">
+                      ⚠ {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* AI Voice-to-Prescription Dictation Bar */}
         <div className="bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white rounded-2xl p-3.5 border border-slate-800 shadow-md">
