@@ -4,10 +4,12 @@ import { StatusBadge, StatBadge, AllergyBadge } from '../common/Badge';
 import { QrCodeModal } from '../common/QrCodeModal';
 import { CreatePrescriptionModal } from './CreatePrescriptionModal';
 import { StopPrescriptionModal } from './StopPrescriptionModal';
+import DdiMatrixModal from './DdiMatrixModal';
+import PatientCompanionModal from '../patient/PatientCompanionModal';
 import { 
   ArrowLeft, QrCode, Plus, Pill, AlertTriangle, Clock, 
   Activity, Calendar, Heart, Thermometer, User, ShieldAlert, 
-  History, CheckCircle2, XCircle, Stethoscope
+  History, CheckCircle2, XCircle, Stethoscope, Sparkles
 } from 'lucide-react';
 
 export function PatientProfile({ patientId, onBack, onPrescribeNew }) {
@@ -18,6 +20,8 @@ export function PatientProfile({ patientId, onBack, onPrescribeNew }) {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [ddiModalOpen, setDdiModalOpen] = useState(false);
+  const [companionModalOpen, setCompanionModalOpen] = useState(false);
   const [selectedRxToStop, setSelectedRxToStop] = useState(null);
 
   const fetchProfile = () => {
@@ -57,27 +61,46 @@ export function PatientProfile({ patientId, onBack, onPrescribeNew }) {
     <div className="space-y-6">
       
       {/* Top Bar: Back & Quick Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl transition-all shadow-subtle hover-lift"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Patients Directory</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* DDI Safety Matrix Button */}
+          <button
+            onClick={() => setDdiModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-900 bg-indigo-50/90 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl shadow-subtle transition-all hover-lift"
+          >
+            <Activity className="w-4 h-4 text-indigo-600" />
+            <span>DDI Safety Matrix</span>
+          </button>
+
+          {/* Patient Care Companion Button */}
+          <button
+            onClick={() => setCompanionModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-900 bg-teal-50/90 hover:bg-teal-100 border border-teal-200/80 rounded-xl shadow-subtle transition-all hover-lift"
+          >
+            <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+            <span>Patient Companion</span>
+          </button>
+
+          {/* Bedside QR Code Button */}
           <button
             onClick={() => setQrModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl shadow-subtle transition-all hover-lift"
           >
             <QrCode className="w-4 h-4 text-brand-600" />
-            <span>Bedside QR Code</span>
+            <span>Bedside QR</span>
           </button>
           
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-600/20 rounded-xl transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-md shadow-brand-600/25 rounded-xl transition-all hover-lift"
           >
             <Plus className="w-4 h-4" />
             <span>Create Prescription</span>
@@ -369,6 +392,7 @@ export function PatientProfile({ patientId, onBack, onPrescribeNew }) {
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         patient={patient}
+        onOpenCompanion={() => setCompanionModalOpen(true)}
       />
 
       <CreatePrescriptionModal
@@ -384,6 +408,20 @@ export function PatientProfile({ patientId, onBack, onPrescribeNew }) {
         prescription={selectedRxToStop}
         patient={patient}
         onSuccess={() => fetchProfile()}
+      />
+
+      <DdiMatrixModal
+        isOpen={ddiModalOpen}
+        onClose={() => setDdiModalOpen(false)}
+        patient={patient}
+        prescriptions={prescriptions}
+      />
+
+      <PatientCompanionModal
+        isOpen={companionModalOpen}
+        onClose={() => setCompanionModalOpen(false)}
+        patient={patient}
+        schedules={profileData.schedules || []}
       />
 
     </div>

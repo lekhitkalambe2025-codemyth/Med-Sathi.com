@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
+import { api } from './services/api';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { StatBanner } from './components/layout/StatBanner';
@@ -11,12 +12,25 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AuditLogView } from './components/admin/AuditLogView';
 import { PharmacistDashboard } from './components/pharmacist/PharmacistDashboard';
 import { AiDelayRiskModal } from './components/ai/AiDelayRiskModal';
+import CodeBlueModal from './components/emergency/CodeBlueModal';
+import ClinicalChatbot from './components/common/ClinicalChatbot';
 
 export function App() {
   const { currentUser } = useAuth();
   const [currentView, setCurrentView] = useState('default');
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [codeBlueOpen, setCodeBlueOpen] = useState(false);
+  const [patients, setPatients] = useState([]);
+
+  // Fetch hospital inpatients for global modals (Code Blue, Chatbot)
+  useEffect(() => {
+    if (currentUser) {
+      api.patients.getAll()
+        .then(res => setPatients(res.data || []))
+        .catch(() => {});
+    }
+  }, [currentUser]);
 
   // Sync default view whenever the logged in user or role changes
   useEffect(() => {
@@ -46,13 +60,16 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50/80 flex flex-col selection:bg-brand-500 selection:text-white relative">
       
       {/* Top Urgent STAT Alert Banner */}
       <StatBanner onNavigateToStat={handleNavigateToStat} />
 
-      {/* Top Navigation Bar */}
-      <Navbar onOpenAiModal={() => setAiModalOpen(true)} />
+      {/* Top Navigation Bar with Code Blue Trigger */}
+      <Navbar 
+        onOpenAiModal={() => setAiModalOpen(true)} 
+        onOpenCodeBlue={() => setCodeBlueOpen(true)}
+      />
 
       {/* Main App Layout */}
       <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
@@ -123,6 +140,20 @@ export function App() {
       <AiDelayRiskModal
         isOpen={aiModalOpen}
         onClose={() => setAiModalOpen(false)}
+      />
+
+      {/* Code Blue Emergency Resuscitation Console Modal */}
+      <CodeBlueModal
+        isOpen={codeBlueOpen}
+        onClose={() => setCodeBlueOpen(false)}
+        patients={patients}
+        currentUser={currentUser}
+      />
+
+      {/* Floating Med-Sathi Clinical AI Copilot Chatbot */}
+      <ClinicalChatbot
+        currentUser={currentUser}
+        patients={patients}
       />
 
     </div>

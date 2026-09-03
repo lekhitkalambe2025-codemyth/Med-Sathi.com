@@ -1,10 +1,10 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Modal } from './Modal';
-import { Download, Copy, Printer, Check, User, MapPin } from 'lucide-react';
+import { Download, Copy, Printer, Check, User, MapPin, Heart } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
-export function QrCodeModal({ isOpen, onClose, patient }) {
+export function QrCodeModal({ isOpen, onClose, patient, onOpenCompanion }) {
   const { showToast } = useToast();
   const [copied, setCopied] = React.useState(false);
 
@@ -56,9 +56,23 @@ export function QrCodeModal({ isOpen, onClose, patient }) {
           />
         </div>
 
-        <p className="text-xs text-slate-500 mb-6 max-w-xs leading-relaxed">
+        <p className="text-xs text-slate-500 mb-4 max-w-xs leading-relaxed">
           Scan this digital badge at the bedside with the Nurse Verification scanner to perform 5-Rights medication administration.
         </p>
+
+        {/* Patient Companion Portal Preview Button */}
+        {onOpenCompanion && (
+          <button
+            onClick={() => {
+              onClose();
+              onOpenCompanion(patient);
+            }}
+            className="w-full mb-4 py-2.5 px-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 hover:to-emerald-100 border border-teal-200/80 text-teal-900 text-xs font-bold flex items-center justify-center gap-2 transition-all hover-lift"
+          >
+            <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+            <span>Open Patient & Family Care Companion</span>
+          </button>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 w-full">

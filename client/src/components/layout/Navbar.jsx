@@ -3,10 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import { RoleBadge } from '../common/Badge';
 import { 
   Pill, Bell, LogOut, ChevronDown, UserCheck, ShieldCheck, 
-  Stethoscope, Activity, Sparkles, CheckCheck
+  Stethoscope, Activity, Sparkles, CheckCheck, ShieldAlert
 } from 'lucide-react';
 
-export function Navbar({ onOpenAiModal }) {
+export function Navbar({ onOpenAiModal, onOpenCodeBlue }) {
   const { currentUser, switchRole, logout, DEFAULT_USERS } = useAuth();
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -33,16 +33,28 @@ export function Navbar({ onOpenAiModal }) {
               </span>
               <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100/90 text-slate-700 rounded-full border border-slate-200/90">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                eMAR Cloud
+                <span>eMAR Cloud</span>
               </span>
             </div>
-            <p className="hidden sm:block text-[11px] text-slate-500 font-medium tracking-tight">SmartMedChart Closed-Loop Clinical Safety</p>
+            <p className="hidden sm:block text-[11px] text-slate-400 font-medium">
+              SmartMedChart Closed-Loop Clinical Safety
+            </p>
           </div>
         </div>
 
-        {/* Right: Role Switcher, AI Prototype, Notifications, User Menu */}
+        {/* Right: Emergency Code Blue, Role Switcher, AI Prototype, Notifications, User Menu */}
         <div className="flex items-center gap-2.5">
           
+          {/* Emergency Code Blue Button */}
+          <button
+            onClick={onOpenCodeBlue}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white shadow-md shadow-rose-600/30 transition-all hover-lift"
+            title="Emergency Code Blue Resuscitation Console"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">CODE BLUE</span>
+          </button>
+
           {/* AI Decision Support Button */}
           <button
             onClick={onOpenAiModal}

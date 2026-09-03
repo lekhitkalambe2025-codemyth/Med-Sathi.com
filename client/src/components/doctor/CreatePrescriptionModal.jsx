@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../common/Modal';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { 
   Pill, AlertTriangle, Clock, Calendar, Check, Stethoscope, 
-  Sparkles, Info, ShieldAlert 
+  Sparkles, Info, ShieldAlert, Mic, MicOff, Volume2 
 } from 'lucide-react';
 
 const COMMON_MEDICINES = [
@@ -35,9 +35,106 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
   const [instructions, setInstructions] = useState('Take after meals with plenty of water.');
   const [isStat, setIsStat] = useState(false);
 
+  // Voice Dictation States
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const recognitionRef = useRef(null);
+
   const [safetyWarnings, setSafetyWarnings] = useState([]);
   const [previewSchedule, setPreviewSchedule] = useState({ totalEvents: 15, events: [] });
   const [submitting, setSubmitting] = useState(false);
+
+  // Clinical Voice Entity Extractor
+  const parseClinicalSpeech = (text) => {
+    setVoiceTranscript(text);
+    const lower = text.toLowerCase();
+
+    // 1. Medicine detection
+    const foundMed = COMMON_MEDICINES.find(m => lower.includes(m.name.toLowerCase()));
+    if (foundMed) {
+      setMedicine(foundMed.name);
+      setDose(foundMed.defaultDose);
+      setRoute(foundMed.defaultRoute);
+      setFrequency(foundMed.defaultFreq);
+    }
+
+    // 2. Dose detection (e.g. 500mg, 1g, 40mg, 4mg)
+    const doseMatch = lower.match(/(\d+(\.\d+)?)\s*(mg|g|mcg|ml|milligram|gram)/i);
+    if (doseMatch) {
+      let unit = doseMatch[3].toLowerCase();
+      if (unit.startsWith('milli')) unit = 'mg';
+      else if (unit.startsWith('g')) unit = 'g';
+      setDose(`${doseMatch[1]} ${unit}`);
+    }
+
+    // 3. Route detection
+    if (lower.includes('intravenous') || lower.includes('iv')) setRoute('IV');
+    else if (lower.includes('oral') || lower.includes('mouth') || lower.includes('tablet')) setRoute('Oral');
+    else if (lower.includes('intramuscular') || lower.includes('im')) setRoute('IM');
+
+    // 4. STAT or Frequency detection
+    if (lower.includes('stat') || lower.includes('immediately') || lower.includes('emergency')) {
+      setIsStat(true);
+      setFrequency('STAT');
+      setDurationDays(1);
+    } else if (lower.includes('tds') || lower.includes('thrice') || lower.includes('three times')) {
+      setFrequency('TDS');
+      setIsStat(false);
+    } else if (lower.includes('bd') || lower.includes('twice') || lower.includes('two times')) {
+      setFrequency('BD');
+      setIsStat(false);
+    } else if (lower.includes('od') || lower.includes('once') || lower.includes('daily')) {
+      setFrequency('OD');
+      setIsStat(false);
+    } else if (lower.includes('q4h') || lower.includes('every 4 hour')) {
+      setFrequency('Q4H');
+      setIsStat(false);
+    }
+
+    // 5. Duration detection
+    const durationMatch = lower.match(/for\s*(\d+)\s*day/i);
+    if (durationMatch) {
+      setDurationDays(parseInt(durationMatch[1], 10));
+    }
+
+    showToast('Voice parsed into e-Prescription successfully!', 'success');
+  };
+
+  const startVoiceDictation = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast('Web Speech API not supported on this browser. Use sample prompts below.', 'info');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        parseClinicalSpeech(transcript);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Speech recognition error:', err);
+      setIsListening(false);
+    }
+  };
 
   // When medicine changes, update defaults and check safety
   const handleSelectMed = (med) => {
@@ -143,6 +240,63 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
               </div>
             </div>
           )}
+        </div>
+
+        {/* AI Voice-to-Prescription Dictation Bar */}
+        <div className="bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white rounded-2xl p-3.5 border border-slate-800 shadow-md">
+          <div className="flex items-center justify-between gap-3 mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                isListening ? 'bg-rose-500 text-white animate-ping' : 'bg-brand-500/30 text-brand-300'
+              }`}>
+                {isListening ? <Mic className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-white">AI Voice-to-Prescription</span>
+                  <span className="text-[10px] font-bold px-2 py-0.2 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full">
+                    Voice Dictation
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">Speak naturally: e.g. "Paracetamol 500mg oral TDS for 5 days"</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={startVoiceDictation}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
+                isListening
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                  : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md'
+              }`}
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>{isListening ? 'Listening (Speak)...' : 'Start Mic'}</span>
+            </button>
+          </div>
+
+          {/* Quick 1-Click Voice Prompt Samples */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-800/80">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mr-1">
+              Sample Dictations:
+            </span>
+            {[
+              "Paracetamol 500mg oral TDS for 5 days",
+              "Ceftriaxone 1g IV BD for 7 days",
+              "Ondansetron 4mg IV STAT immediately",
+              "Metformin 500mg oral BD with meals"
+            ].map((sample, sIdx) => (
+              <button
+                key={sIdx}
+                type="button"
+                onClick={() => parseClinicalSpeech(sample)}
+                className="text-[10px] bg-slate-800/90 hover:bg-brand-900/60 hover:text-brand-200 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 transition-colors"
+              >
+                "{sample}"
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Quick Common Meds Pills */}
