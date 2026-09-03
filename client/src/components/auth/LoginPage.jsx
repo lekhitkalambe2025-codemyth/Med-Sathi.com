@@ -1,13 +1,26 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Pill, ShieldCheck, Stethoscope, HeartPulse, User, Lock, ArrowRight, Activity, CheckCircle2 } from 'lucide-react';
+import { Pill, ShieldCheck, Stethoscope, HeartPulse, User, Lock, ArrowRight, Activity, CheckCircle2, UserPlus, Plus, X, Sparkles } from 'lucide-react';
 
 export function LoginPage() {
-  const { login, DEFAULT_USERS } = useAuth();
+  const { login, registerStaff, demoUsers, DEFAULT_USERS } = useAuth();
   const [email, setEmail] = useState('doctor@smartmed.com');
   const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Onboard Staff State
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    email: '',
+    role: 'DOCTOR',
+    department: 'Cardiology & CCU',
+    title: 'Consultant Physician',
+    password: 'password123'
+  });
+  const [addStaffLoading, setAddStaffLoading] = useState(false);
+  const [addStaffSuccess, setAddStaffSuccess] = useState('');
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -20,13 +33,45 @@ export function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (roleKey) => {
-    const user = DEFAULT_USERS[roleKey];
-    if (user) {
-      setEmail(user.email);
+  const handleQuickLogin = (userOrRole) => {
+    if (typeof userOrRole === 'string') {
+      const user = DEFAULT_USERS[userOrRole];
+      if (user) {
+        setEmail(user.email);
+        setPassword('password123');
+        login(user.email, 'password123');
+      }
+    } else {
+      // User object from demoUsers or registered
+      setEmail(userOrRole.email);
       setPassword('password123');
-      login(user.email, 'password123');
+      login(userOrRole.email, 'password123');
     }
+  };
+
+  const handleRegisterStaff = async (e) => {
+    e?.preventDefault();
+    if (!newStaff.name.trim() || !newStaff.email.trim()) return;
+
+    setAddStaffLoading(true);
+    setAddStaffSuccess('');
+    setError('');
+
+    const res = await registerStaff(newStaff);
+    setAddStaffLoading(false);
+
+    if (res.success) {
+      setAddStaffSuccess(`Successfully registered ${newStaff.name}! Entering portal...`);
+      setTimeout(() => {
+        login(newStaff.email, newStaff.password);
+      }, 800);
+    } else {
+      setError(res.error || 'Failed to register staff member.');
+    }
+  };
+
+  const handlePresetStaff = (preset) => {
+    setNewStaff(preset);
   };
 
   return (
@@ -122,10 +167,11 @@ export function LoginPage() {
                 1-Click Quick Demo Personas
               </span>
               <span className="text-[10px] text-brand-700 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200/60">
-                Hackathon Mode
+                Hackathon Multi-Staff
               </span>
             </div>
 
+            {/* Core Roles Grid */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -137,7 +183,7 @@ export function LoginPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900 truncate">Dr. Sharma</p>
-                  <p className="text-[10px] text-slate-500 truncate">Doctor (Prescribe)</p>
+                  <p className="text-[10px] text-slate-500 truncate">Internal Med (Physician)</p>
                 </div>
               </button>
 
@@ -151,7 +197,7 @@ export function LoginPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 group-hover:text-teal-900 truncate">Nurse Priya</p>
-                  <p className="text-[10px] text-slate-500 truncate">Nurse (eMAR)</p>
+                  <p className="text-[10px] text-slate-500 truncate">Ward Shift Lead (eMAR)</p>
                 </div>
               </button>
 
@@ -165,7 +211,7 @@ export function LoginPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 group-hover:text-purple-900 truncate">Dr. Gupta</p>
-                  <p className="text-[10px] text-slate-500 truncate">Admin (Analytics)</p>
+                  <p className="text-[10px] text-slate-500 truncate">Chief Medical Officer</p>
                 </div>
               </button>
 
@@ -179,8 +225,49 @@ export function LoginPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 group-hover:text-amber-900 truncate">Anil Verma</p>
-                  <p className="text-[10px] text-slate-500 truncate">Pharmacist (Supply)</p>
+                  <p className="text-[10px] text-slate-500 truncate">Chief Pharmacist</p>
                 </div>
+              </button>
+            </div>
+
+            {/* Additional Hospital Doctors & Nurses in System */}
+            {demoUsers.length > 4 && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wider">
+                  Additional Department Doctors & Nurses:
+                </span>
+                <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {demoUsers.slice(4).map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => handleQuickLogin(u)}
+                      className="flex items-center gap-2 p-2 rounded-lg border border-slate-200/70 bg-white hover:bg-slate-100/90 text-left transition-all"
+                    >
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black ${
+                        u.role === 'DOCTOR' ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'
+                      }`}>
+                        {u.role === 'DOCTOR' ? 'MD' : 'RN'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-800 truncate">{u.name}</p>
+                        <p className="text-[9px] text-slate-500 truncate">{u.department}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prominent "+ Onboard New Doctor / Nurse / Staff" Button */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setShowAddStaffModal(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-dashed border-brand-400 bg-brand-50/70 hover:bg-brand-100/80 text-brand-800 text-xs font-bold transition-all shadow-subtle hover-lift"
+              >
+                <UserPlus className="w-4 h-4 text-brand-600" />
+                <span>+ Add / Onboard New Doctor or Nurse</span>
               </button>
             </div>
           </div>
@@ -193,6 +280,218 @@ export function LoginPage() {
           <span>NABH & JCI 5-Rights Closed-Loop Architecture</span>
         </div>
       </div>
+
+      {/* Hospital Staff Onboarding Modal */}
+      {showAddStaffModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-300 flex items-center justify-center border border-brand-400/30">
+                  <UserPlus className="w-5 h-5 text-teal-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Onboard Hospital Staff</h3>
+                  <p className="text-xs text-slate-400">Add a new Doctor, Nurse, Pharmacist, or Admin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddStaffModal(false)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick 1-Click Demo Presets */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                1-Click Quick Fill Presets:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePresetStaff({
+                    name: 'Dr. Rajesh Patel',
+                    email: 'dr.patel@medsathi.com',
+                    role: 'DOCTOR',
+                    department: 'Cardiology & CCU',
+                    title: 'Consultant Cardiologist',
+                    password: 'password123'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-700 font-semibold text-slate-700 shadow-2xs transition-all"
+                >
+                  👨‍⚕️ + Dr. Rajesh Patel (Cardiology)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetStaff({
+                    name: 'Nurse Anjali Sharma',
+                    email: 'nurse.anjali@medsathi.com',
+                    role: 'NURSE',
+                    department: 'Intensive Care Unit (ICU)',
+                    title: 'Lead Critical Care Nurse',
+                    password: 'password123'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-teal-400 hover:text-teal-700 font-semibold text-slate-700 shadow-2xs transition-all"
+                >
+                  👩‍⚕️ + Nurse Anjali (ICU Lead)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetStaff({
+                    name: 'Dr. Sunita Rao',
+                    email: 'dr.sunita@medsathi.com',
+                    role: 'DOCTOR',
+                    department: 'Pediatrics',
+                    title: 'Pediatric Specialist',
+                    password: 'password123'
+                  })}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-700 font-semibold text-slate-700 shadow-2xs transition-all"
+                >
+                  👩‍⚕️ + Dr. Sunita Rao (Pediatrics)
+                </button>
+              </div>
+            </div>
+
+            {/* Registration Form */}
+            <form onSubmit={handleRegisterStaff} className="p-5 space-y-4">
+              {addStaffSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{addStaffSuccess}</span>
+                </div>
+              )}
+
+              {/* Role Picker */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Select Clinical Staff Role *
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { key: 'DOCTOR', label: 'Doctor', icon: '👨‍⚕️' },
+                    { key: 'NURSE', label: 'Nurse', icon: '👩‍⚕️' },
+                    { key: 'PHARMACIST', label: 'Pharmacist', icon: '💊' },
+                    { key: 'ADMIN', label: 'Admin', icon: '🛡️' }
+                  ].map(r => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setNewStaff({ ...newStaff, role: r.key })}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold border text-center transition-all ${
+                        newStaff.role === r.key
+                          ? 'bg-brand-50 border-brand-500 text-brand-900 ring-2 ring-brand-500/20 shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="block text-base mb-0.5">{r.icon}</span>
+                      <span>{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Name & Department */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Full Name & Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newStaff.name}
+                    onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                    required
+                    placeholder="e.g. Dr. Rajesh Patel"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Department / Ward *
+                  </label>
+                  <input
+                    type="text"
+                    value={newStaff.department}
+                    onChange={(e) => setNewStaff({ ...newStaff, department: e.target.value })}
+                    required
+                    placeholder="e.g. Cardiology & CCU"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Designation & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Clinical Designation
+                  </label>
+                  <input
+                    type="text"
+                    value={newStaff.title}
+                    onChange={(e) => setNewStaff({ ...newStaff, title: e.target.value })}
+                    placeholder="e.g. Consultant Physician"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Hospital Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={newStaff.email}
+                    onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                    required
+                    placeholder="e.g. dr.patel@medsathi.com"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Terminal Access Password
+                </label>
+                <input
+                  type="password"
+                  value={newStaff.password}
+                  onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                  placeholder="password123"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:bg-white"
+                />
+              </div>
+
+              {/* Submit & Cancel */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddStaffModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addStaffLoading}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-brand-600 via-sky-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 shadow-md shadow-brand-600/25 transition-all hover-lift flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{addStaffLoading ? 'Registering Staff...' : 'Register & Log In'}</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

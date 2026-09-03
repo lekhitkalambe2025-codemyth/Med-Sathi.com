@@ -25,6 +25,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+    register: (staffData) => fetchJson('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(staffData),
+    }),
   },
 
   patients: {

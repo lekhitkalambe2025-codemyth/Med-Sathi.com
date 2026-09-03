@@ -80,6 +80,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const registerStaff = async (staffData) => {
+    try {
+      const res = await api.auth.register(staffData);
+      const newUser = res.data;
+      setDemoUsers(prev => [...prev, newUser]);
+      setCurrentUser(newUser);
+      localStorage.setItem('smartmed_user', JSON.stringify(newUser));
+      return { success: true, user: newUser };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
   const switchRole = (roleKey) => {
     const target = DEFAULT_USERS[roleKey] || DEFAULT_USERS.DOCTOR;
     setCurrentUser(target);
@@ -92,7 +105,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, switchRole, logout, demoUsers, DEFAULT_USERS }}>
+    <AuthContext.Provider value={{ currentUser, login, switchRole, logout, registerStaff, demoUsers, DEFAULT_USERS }}>
       {children}
     </AuthContext.Provider>
   );

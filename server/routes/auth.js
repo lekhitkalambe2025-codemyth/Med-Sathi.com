@@ -37,4 +37,45 @@ router.post('/login', (req, res) => {
   }
 });
 
+// Register / Add new doctor, nurse, or staff
+router.post('/register', (req, res) => {
+  const { name, email, password, role, title, department } = req.body;
+  if (!name || !email || !role) {
+    return res.status(400).json({ success: false, error: 'Name, email, and role are required.' });
+  }
+
+  try {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'A staff member with this email already exists.' });
+    }
+
+    const id = `usr-${role.toLowerCase().slice(0, 3)}-${Date.now().toString().slice(-4)}`;
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'ST';
+
+    db.prepare(`
+      INSERT INTO users (id, name, email, password, role, title, department, avatar)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      name,
+      email,
+      password || 'password123',
+      role.toUpperCase(),
+      title || (role === 'DOCTOR' ? 'Attending Physician' : role === 'NURSE' ? 'Staff Nurse' : role === 'PHARMACIST' ? 'Clinical Pharmacist' : 'Hospital Administrator'),
+      department || 'Inpatient General Ward',
+      initials
+    );
+
+    const newUser = db.prepare('SELECT id, name, email, role, title, department, avatar FROM users WHERE id = ?').get(id);
+    res.json({
+      success: true,
+      token: `demo-jwt-token-${newUser.id}`,
+      user: newUser
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
