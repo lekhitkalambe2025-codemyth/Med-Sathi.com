@@ -41,11 +41,11 @@ export function LoginPage() {
           <Pill className="w-8 h-8 transform -rotate-45" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          Med-<span className="bg-gradient-to-r from-brand-400 to-teal-400 bg-clip-text text-transparent">Sathi</span>
+          Med <span className="bg-gradient-to-r from-brand-400 to-teal-400 bg-clip-text text-transparent">Sathi</span>
         </h2>
         <div className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-bold text-slate-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>SmartMedChart Enterprise eMAR</span>
+          <span>Med Sathi Enterprise eMAR</span>
         </div>
         <p className="mt-2 text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
           Closed-Loop Digital Medication Chart & Bedside 5-Rights Verification System

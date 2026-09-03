@@ -29,7 +29,7 @@ export function Navbar({ onOpenAiModal, onOpenCodeBlue }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-slate-900 tracking-tight text-lg">
-                Med-<span className="bg-gradient-to-r from-brand-600 to-teal-600 bg-clip-text text-transparent">Sathi</span>
+                Med <span className="bg-gradient-to-r from-brand-600 to-teal-600 bg-clip-text text-transparent">Sathi</span>
               </span>
               <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100/90 text-slate-700 rounded-full border border-slate-200/90">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -37,7 +37,7 @@ export function Navbar({ onOpenAiModal, onOpenCodeBlue }) {
               </span>
             </div>
             <p className="hidden sm:block text-[11px] text-slate-400 font-medium">
-              SmartMedChart Closed-Loop Clinical Safety
+              Closed-Loop Clinical Safety & Bedside eMAR
             </p>
           </div>
         </div>

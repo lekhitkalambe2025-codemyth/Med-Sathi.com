@@ -1,7 +1,7 @@
 {
-  "name": "smartmedchart-server",
+  "name": "med-sathi-server",
   "version": "1.0.0",
-  "description": "SmartMedChart Backend API with SQLite",
+  "description": "Med Sathi Clinical Backend API with SQLite",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
