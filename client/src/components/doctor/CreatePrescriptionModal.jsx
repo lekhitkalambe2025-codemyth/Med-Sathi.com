@@ -38,6 +38,7 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
   // Voice Dictation States
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const recognitionRef = useRef(null);
 
   const [safetyWarnings, setSafetyWarnings] = useState([]);
@@ -97,13 +98,13 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
       setDurationDays(parseInt(durationMatch[1], 10));
     }
 
-    showToast('Voice parsed into e-Prescription successfully!', 'success');
+    showToast(`Parsed: "${text}"`, 'success');
   };
 
   const startVoiceDictation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      showToast('Web Speech API not supported on this browser. Use sample prompts below.', 'info');
+      showToast('Speech Recognition not supported in this browser. Please use Google Chrome/Edge or the sample prompts below.', 'error');
       return;
     }
 
@@ -116,16 +117,44 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
     try {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onstart = () => setIsListening(true);
-      recognition.onend = () => setIsListening(false);
-      recognition.onerror = () => setIsListening(false);
+      recognition.onstart = () => {
+        setIsListening(true);
+        setInterimTranscript('');
+        showToast('Microphone listening... Speak your prescription order now!', 'info');
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event) => {
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          showToast('Microphone access blocked! Click the lock icon (🔒) in your browser URL bar and set Microphone to "Allow".', 'error');
+        } else if (event.error === 'no-speech') {
+          showToast('No speech was detected. Please speak closer to your mic or click a sample dictation button below.', 'info');
+        } else if (event.error === 'network') {
+          showToast('Speech network service unavailable. You can click any of the 1-click sample prompts below.', 'error');
+        } else {
+          showToast(`Speech recognition: ${event.error}`, 'info');
+        }
+      };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        parseClinicalSpeech(transcript);
+        let currentText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const trans = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            setInterimTranscript(trans);
+            parseClinicalSpeech(trans);
+          } else {
+            currentText += trans;
+            setInterimTranscript(currentText);
+          }
+        }
       };
 
       recognitionRef.current = recognition;
@@ -133,6 +162,7 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
     } catch (err) {
       console.error('Speech recognition error:', err);
       setIsListening(false);
+      showToast('Could not access microphone. Please check browser permissions.', 'error');
     }
   };
 
@@ -267,14 +297,32 @@ export function CreatePrescriptionModal({ isOpen, onClose, patient, onSuccess })
               onClick={startVoiceDictation}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
                 isListening
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse shadow-lg shadow-rose-600/40'
                   : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md'
               }`}
             >
               <Mic className="w-3.5 h-3.5" />
-              <span>{isListening ? 'Listening (Speak)...' : 'Start Mic'}</span>
+              <span>{isListening ? 'Stop Listening' : 'Start Mic'}</span>
             </button>
           </div>
+
+          {/* Live Speech Feedback Stream */}
+          {(isListening || interimTranscript) && (
+            <div className="mb-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-slate-700 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping flex-shrink-0"></span>
+                <span className="text-slate-400 text-[11px] flex-shrink-0">Heard:</span>
+                <span className="text-white font-mono font-bold truncate">
+                  "{interimTranscript || 'Listening... Speak your prescription'}"
+                </span>
+              </div>
+              {isListening && (
+                <span className="text-[10px] text-rose-400 font-black uppercase tracking-wider flex-shrink-0 animate-pulse">
+                  Live Mic
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Quick 1-Click Voice Prompt Samples */}
           <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-800/80">
