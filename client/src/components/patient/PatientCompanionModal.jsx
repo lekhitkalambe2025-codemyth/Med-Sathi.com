@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Heart, Clock, CheckCircle2, ShieldCheck, Languages, X, Calendar, User, Sparkles } from 'lucide-react';
+import { Heart, Clock, CheckCircle2, ShieldCheck, Languages, X, Calendar, User, Sparkles, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const DRUG_EXPLANATIONS = {
   'Paracetamol': {
@@ -118,6 +119,37 @@ export default function PatientCompanionModal({ isOpen, onClose, patient, schedu
           <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full border border-emerald-200/80 text-[11px] font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>5-Rights Verified Bedside</span>
+          </div>
+        </div>
+
+        {/* Scannable Bedside QR Code Card */}
+        <div className="mx-5 mt-4 p-3.5 bg-gradient-to-r from-teal-50/90 via-sky-50/90 to-brand-50/80 rounded-2xl border border-teal-200/80 flex items-center justify-between gap-4 shadow-subtle">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-xl border border-teal-200 shadow-sm flex-shrink-0">
+              <QRCodeSVG
+                value={patient.qrCode || `SMARTMED:PATIENT:${patient.id}:${patient.uhid}:${patient.name}:${patient.bed}`}
+                size={60}
+                level="M"
+              />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1">
+                <QrCode className="w-3.5 h-3.5 text-teal-600" />
+                <span>{lang === 'en' ? 'Bedside Digital Patient QR' : 'मरीज़ का डिजिटल बारकोड'}</span>
+              </span>
+              <p className="text-xs font-bold text-slate-800 mt-0.5">
+                {lang === 'en' ? 'Scan with your smartphone to track care plan' : 'अपने स्मार्टफोन कैमरे से स्कैन करें'}
+              </p>
+              <span className="text-[10px] font-mono text-slate-500 block mt-0.5">
+                UHID: {patient.uhid} • Bed {patient.bed}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right hidden sm:block">
+            <span className="text-[10px] font-bold text-teal-700 bg-white/80 px-2.5 py-1 rounded-lg border border-teal-200/80 block">
+              {lang === 'en' ? 'Live Encrypted eMAR' : 'सुरक्षित ई-रिकॉर्ड'}
+            </span>
           </div>
         </div>
 

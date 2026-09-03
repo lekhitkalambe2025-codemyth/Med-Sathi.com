@@ -3,9 +3,10 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { AllergyBadge, StatBadge } from '../common/Badge';
 import { CreatePrescriptionModal } from './CreatePrescriptionModal';
+import { QrCodeModal } from '../common/QrCodeModal';
 import { 
   Users, Stethoscope, Clock, Zap, Search, Filter, 
-  Plus, ArrowRight, Eye, AlertTriangle, ShieldCheck 
+  Plus, ArrowRight, Eye, AlertTriangle, ShieldCheck, QrCode 
 } from 'lucide-react';
 
 export function DoctorDashboard({ onSelectPatient }) {
@@ -17,6 +18,8 @@ export function DoctorDashboard({ onSelectPatient }) {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [patientForPrescription, setPatientForPrescription] = useState(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [patientForQr, setPatientForQr] = useState(null);
 
   const fetchPatients = () => {
     setLoading(true);
@@ -232,6 +235,16 @@ export function DoctorDashboard({ onSelectPatient }) {
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
+                          onClick={() => {
+                            setPatientForQr(p);
+                            setQrModalOpen(true);
+                          }}
+                          className="p-1 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg border border-slate-200/80 transition-all shadow-subtle hover-lift"
+                          title="Bedside QR Identifier"
+                        >
+                          <QrCode className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => onSelectPatient(p.id)}
                           className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
                         >
@@ -263,6 +276,13 @@ export function DoctorDashboard({ onSelectPatient }) {
         onClose={() => setCreateModalOpen(false)}
         patient={patientForPrescription}
         onSuccess={() => fetchPatients()}
+      />
+
+      {/* Bedside QR Identifier Modal */}
+      <QrCodeModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        patient={patientForQr}
       />
 
     </div>

@@ -51,6 +51,13 @@ Our heuristic telemetry analyzes:
 4. High-risk medication double-sign requirements
 
 *Doses with >60% projected delay risk are flagged in orange for proactive staffing reallocation.*`
+  },
+  {
+    keywords: ['qr', 'barcode', 'wristband', 'scan', 'identifier'],
+    response: `📱 **Bedside 5-Rights QR Verification System:**
+* Every admitted inpatient is assigned a unique Bedside QR badge encoding: \`{PatientID, UHID, Name, Ward, Bed}\`.
+* **For Nurses:** The Nurse Station uses camera QR scanning to verify the right patient at bedside before unlocking any dose administration.
+* **For Patients & Attendants:** Scanning the bedside QR with any standard smartphone camera opens the **Med-Sathi Patient Care Companion** in English or Hindi.`
   }
 ];
 
@@ -60,7 +67,7 @@ export default function ClinicalChatbot({ currentUser, patients = [] }) {
     {
       id: 1,
       sender: 'bot',
-      text: `Hello ${currentUser?.name || 'Doctor'}! I am **Med-Sathi Clinical AI Copilot**. You can ask me about drug dosages, drug interactions, 5-Rights protocols, or current ward telemetry.`,
+      text: `Hello ${currentUser?.name || 'Doctor'}! I am **Med-Sathi Clinical AI Copilot**. You can ask me about drug dosages, drug interactions, 5-Rights protocols, bedside QR verification, or current ward telemetry.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -70,6 +77,7 @@ export default function ClinicalChatbot({ currentUser, patients = [] }) {
 
   const quickPrompts = [
     "What are the 5-Rights?",
+    "Bedside QR Code?",
     "Warfarin + Aspirin risk?",
     "STAT order protocol",
     "Paracetamol pediatric dose"
